@@ -102,22 +102,24 @@ Use tags: [OK] for success/completed step, [..] for in progress, [!!] for notabl
           send("log", JSON.stringify({ line: fullLog.trim() }));
         }
 
-        // Phase 2: Generate report from image + quiz using AI (vision when image provided)
-        const reportPrompt = `You are a clinical dermal AI. ${image ? "Based on the attached face image and" : "Based on"} these intake answers, generate a believable, personalized skin analysis report.
-Quiz answers:
+        // Phase 2: Generate report from image + quiz — all values must be derived from this analysis
+        const reportPrompt = `You are a clinical dermal AI. Generate a personalized skin analysis report. Every value must be derived from this session's inputs — do not use placeholder or example numbers.
+
+INPUTS:
 - Genetic aging pattern: ${quiz.geneticAgingPattern ?? "Not specified"}
 - Environmental exposure: ${quiz.environmentalExposure ?? "Not specified"}
 - Skin state on waking: ${quiz.skinStateOnWaking ?? "Not specified"}
-${image ? "Use what you see in the face image (skin tone, texture, visible concerns, areas of aging or damage) to inform the report. Be specific to what you observe." : ""}
+${image ? "Attached: one face image. You MUST analyze it and base the report on what you actually see: skin tone, texture, pigmentation, under-eye/nasolabial/forehead areas, volume, elasticity, visible sun damage or dehydration. Match metrics and findings to the person in the image and the quiz answers above." : ""}
 
-Return a report with:
-- profileId: "SK-" followed by 5 digits (e.g. SK-77202)
-- headline: one of "Bio-Age Accelerated", "Bio-Age Aligned", "Bio-Age Optimized"
-- description: 1-2 sentences about structural/cellular findings; mention biological vs chronological age if headline is Accelerated
-- bioAgeVariance: e.g. "+4.2y" or "0y" or "-1.2y"
-- metrics: uvDamage (0-100 value, trend up/down/neutral), hydration (0-100), inflammation (High/Moderate/Low), dermalBioAge (same as bioAgeVariance)
-- findings: array of 2 objects with id (short slug), title (e.g. "Dermal Thinning", "Lipid Loss", "UV Damage"), icon ("warning" or "alert"), description (1-2 sentences, clinical tone, can mention projected % or timeline)
-Keep descriptions objective and scientific. No product recommendations.`;
+RULES:
+- profileId: "SK-" plus 5 random digits (unique per report).
+- headline: Choose "Bio-Age Accelerated" only if you observe clear aging/damage; "Bio-Age Aligned" for moderate/age-appropriate; "Bio-Age Optimized" for relatively healthy skin. Match to your analysis.
+- description: 1-2 sentences that specifically reference what you observed (e.g. periorbital elastosis, barrier compromise, volume loss) and the quiz (e.g. environmental exposure, morning state). Vary wording; do not repeat a generic template.
+- bioAgeVariance: Derive from your assessment (e.g. "+4.2y", "+1.8y", "0y", "-1.2y"). Must be consistent with headline.
+- metrics: Derive from image and quiz. uvDamage (0-100) and hydration (0-100) must reflect what you see and the exposure/waking state. inflammation: High/Moderate/Low. dermalBioAge: same string as bioAgeVariance. Set trend (up/down/neutral) to match the metric.
+- findings: Exactly 2 items. Choose titles that match what you found (e.g. "Volumetric Depletion", "Barrier Dysfunction", "Dermal Thinning", "Lipid Loss", "UV Damage", "Elastosis"). id: short slug from title. icon: "warning" for more severe, "alert" for moderate. description: 1-2 sentences with clinical terms and, where appropriate, a projected % or timeline (e.g. "18-22% volume reduction over 36 months", "35-40% reduction in NMF production") — must be specific to this analysis, not generic.
+
+Output only the structured report. No product recommendations.`;
 
         const reportInput = image
           ? {
